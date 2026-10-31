@@ -18,7 +18,7 @@ A custom integration for Solarmax hybrid inverters that speak the **Modbus Proto
   - An option turns the integration read-only.
 - **Robust:**
   - If the inverter rejects block reads across undefined addresses, it falls back to smaller reads automatically.
-  - Lifetime energy counters can never go down, so a bad read cannot double-count in the Energy dashboard.
+  - Bad reads can't corrupt the Energy dashboard (see [Data protection](#data-protection)).
   - It reconnects by itself after Wi-Fi drops.
 
 ## Install
@@ -90,6 +90,44 @@ Go to **Settings → Devices & services → Solarmax → Configure**:
 - live data interval (default 10 s, minimum 5 s)
 - settings interval (default 60 s)
 - **Enable control entities**: turn it off for a read-only integration
+
+## Data protection
+
+Home Assistant's Energy dashboard treats any big drop in an energy total as a meter reset. It then counts the whole total again when the value comes back. A single bad Modbus read, such as a 0 during a Wi-Fi reconnect, can add thousands of kWh to one day. The integration protects against this in three layers.
+
+**1. Bad reads are ignored**
+
+| Problem | What happens |
+|---|---|
+| A block comes back as all zeros | The read is discarded; values show as unavailable for that poll, never 0 |
+| Impossible value (SOC 250 %, 900 V AC, 80 Hz) | That value shows as unavailable |
+| Lifetime counter drops, reads 0, or jumps higher than the inverter could produce in the elapsed time | The last good value is kept |
+| Daily counter drops in the middle of the day | The last good value is kept (resets are accepted around midnight) |
+
+The plausibility limit is 3 × the inverter's rated power, and at least 30 kWh per hour. It scales with the elapsed time, so a real increase after Home Assistant was off for a day is still accepted.
+
+**2. Real changes heal themselves.** If a change persists for 6 readings over at least a minute (for example a replaced inverter, or a firmware update that resets the counters), it is accepted:
+- Lifetime counters carry on from where they were: no dip, nothing counted twice.
+- If readings return to the old track after a temporary fault, the energy produced in between is still counted.
+
+The guard state is saved, so this survives restarts. When upgrading from the YAML setup or v1.0, counters continue from the last value Home Assistant recorded.
+
+**3. Old spikes can be repaired.** The `solarmax_modbus.repair_energy_statistics` service finds hours where a total changed by more than is physically possible, and removes the spike from the statistics. It previews by default:
+
+```yaml
+action: solarmax_modbus.repair_energy_statistics
+data:
+  entity_id:          # optional; default: this integration's lifetime energy counters
+    - sensor.solarmax_total_import_fixed
+    - sensor.solarmax_total_export_fixed
+  start: "2026-10-01 00:00:00"   # optional; default: 30 days ago
+  dry_run: true                  # set to false to apply
+response_variable: result
+```
+
+Run it from **Developer tools → Actions** to see the list, then run it again with `dry_run: false`. It works on any total sensor, including template helpers built on these sensors. For a cost sensor, also pass `max_change_per_hour` in its currency. The equivalent manual fix is **Developer tools → Statistics → Adjust sum**.
+
+The diagnostics download includes a `data_quality` section: rejected blocks, rejected readings per counter, and any rebases with their reason.
 
 ## Fault events
 

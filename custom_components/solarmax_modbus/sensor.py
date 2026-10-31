@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
     RestoreSensor,
+    SensorExtraStoredData,
     SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
@@ -31,6 +33,7 @@ from homeassistant.util import dt as dt_util
 from . import registers as R
 from .coordinator import SolarmaxConfigEntry, SolarmaxCoordinator
 from .entity import SolarmaxEntity, requirement_met
+from .guards import DailyGuard, LifetimeGuard
 
 PARALLEL_UPDATES = 0
 
@@ -44,7 +47,8 @@ class SolarmaxSensorDescription(SensorEntityDescription):
     value_fn: Callable[[SolarmaxCoordinator], Any] | None = None
     attrs_fn: Callable[[SolarmaxCoordinator], dict[str, Any]] | None = None
     requires: str | None = None
-    monotonic: bool = False  # lifetime counter: never allowed to go down
+    guard: str | None = None  # "lifetime" or "daily": protect the counter from bad reads
+    rate: str = "energy"  # max plausible rate: "energy" (kWh/h) or "hours" (h/h)
 
 
 def _d(key, dc=None, unit=None, sc=M, prec=None, req=None, **kw) -> SolarmaxSensorDescription:
@@ -71,7 +75,10 @@ def HZ(key, req=None, **kw):
 
 
 def KWH(key, total=False, prec=2, **kw):
-    return _d(key, SensorDeviceClass.ENERGY, UnitOfEnergy.KILO_WATT_HOUR, TI, prec=prec, monotonic=total, **kw)
+    return _d(
+        key, SensorDeviceClass.ENERGY, UnitOfEnergy.KILO_WATT_HOUR, TI, prec=prec,
+        guard="lifetime" if total else "daily", **kw,
+    )
 
 
 def ENUM(key, options: dict, source: str | None = None, **kw):
@@ -130,7 +137,7 @@ SENSORS: tuple[SolarmaxSensorDescription, ...] = (
     W("pv_power"),
     KWH("pv_total_production", total=True, prec=3),
     KWH("pv_daily_production"),
-    _d("total_generation_time", SensorDeviceClass.DURATION, UnitOfTime.HOURS, TI, prec=0, monotonic=True),
+    _d("total_generation_time", SensorDeviceClass.DURATION, UnitOfTime.HOURS, TI, prec=0, guard="lifetime", rate="hours"),
     # --- grid (meter)
     W("grid_power"), W("grid_power_l2", "three_phase"), W("grid_power_l3", "three_phase"),
     V("grid_voltage"), V("grid_voltage_l2", "three_phase"), V("grid_voltage_l3", "three_phase"),
@@ -202,42 +209,81 @@ async def async_setup_entry(
     )
 
 
+@dataclass
+class SolarmaxSensorExtraData(SensorExtraStoredData):
+    """Restore data plus the counter guard's state."""
+
+    guard: dict | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        data = super().as_dict()
+        data["guard"] = self.guard
+        return data
+
+
+def _clock() -> tuple[float, datetime]:
+    """(UTC timestamp, local time) for the counter guards. Patched in tests."""
+    return dt_util.utcnow().timestamp(), dt_util.now()
+
+
 class SolarmaxSensor(SolarmaxEntity, RestoreSensor):
     entity_description: SolarmaxSensorDescription
 
     def __init__(self, coordinator: SolarmaxCoordinator, description: SolarmaxSensorDescription) -> None:
         super().__init__(coordinator, description)
-        self._floor: float | None = None
         self._read_ok = False
-        self._update_value()
+        self._guard: LifetimeGuard | DailyGuard | None = None
+        if description.guard:
+            rate = 1.5 if description.rate == "hours" else coordinator.max_energy_rate
+            cls = LifetimeGuard if description.guard == "lifetime" else DailyGuard
+            self._guard = cls(f"{coordinator.config_entry.title} {description.key}", rate)
+            coordinator.guards[description.key] = self._guard
+        else:
+            self._update_value()
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if self.entity_description.monotonic:
+        if self._guard is not None:
+            await self._restore_guard()
+            self._update_value()
+
+    async def _restore_guard(self) -> None:
+        extra = await self.async_get_last_extra_data()
+        stored = extra.as_dict() if extra else {}
+        if isinstance(stored.get("guard"), dict) and self._guard.load(stored["guard"]):
+            return
+        if isinstance(self._guard, LifetimeGuard):
+            # Upgrading from v1.0 or the YAML modbus sensor: continue from the
+            # last value Home Assistant recorded for this entity ID.
             last = await self.async_get_last_sensor_data()
+            last_state = await self.async_get_last_state()
             try:
-                restored = float(last.native_value) if last and last.native_value is not None else None
+                value = float(last.native_value) if last and last.native_value is not None else None
             except (TypeError, ValueError):
-                restored = None
-            if restored is not None and restored > 0:
-                self._floor = max(restored, self._floor or 0)
-                self._update_value()
+                value = None
+            if value is not None:
+                ts = last_state.last_updated.timestamp() if last_state else dt_util.utcnow().timestamp()
+                self._guard.seed(value, ts)
 
     def _update_value(self) -> None:
         desc = self.entity_description
         value = desc.value_fn(self.coordinator) if desc.value_fn else self._value()
+        if isinstance(self._guard, LifetimeGuard):
+            value = self._guard.update(value, _clock()[0])
+        elif isinstance(self._guard, DailyGuard):
+            value = self._guard.update(value, *_clock())
         self._read_ok = value is not None
-        if desc.monotonic and value is not None:
-            # A lifetime counter never drops. A lower or zero reading is a read
-            # glitch; keeping the last good value stops the Energy dashboard
-            # from counting the whole total a second time.
-            if value <= 0 or (self._floor is not None and value < self._floor):
-                value = self._floor
-            else:
-                self._floor = value
         self._attr_native_value = value
         if desc.attrs_fn:
             self._attr_extra_state_attributes = desc.attrs_fn(self.coordinator)
+
+    @property
+    def extra_restore_state_data(self) -> SolarmaxSensorExtraData:
+        return SolarmaxSensorExtraData(
+            self.native_value,
+            self.native_unit_of_measurement,
+            self._guard.to_dict() if self._guard is not None else None,
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:

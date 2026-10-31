@@ -521,5 +521,29 @@
         "name": "Sync Inverter Clock"
       }
     }
+  },
+  "services": {
+    "repair_energy_statistics": {
+      "name": "Repair energy statistics",
+      "description": "Finds hours where an energy total jumped by more than is physically possible, for example after a bad read, and removes the spike. Runs as a preview unless Preview only is turned off.",
+      "fields": {
+        "entity_id": {
+          "name": "Energy sensors",
+          "description": "Sensors to check. Default: this integration's lifetime energy counters. You can add helpers built on them, such as template sensors used by the Energy dashboard."
+        },
+        "start": {
+          "name": "Check from",
+          "description": "Default: 30 days ago."
+        },
+        "max_change_per_hour": {
+          "name": "Largest real change per hour",
+          "description": "Hours that change by more than this are treated as spikes: kWh for energy sensors, the sensor's own unit otherwise. Default: 3 times the inverter's rated power, at least 30 kWh."
+        },
+        "dry_run": {
+          "name": "Preview only",
+          "description": "On: only list the spikes. Off: remove them."
+        }
+      }
+    }
   }
 }

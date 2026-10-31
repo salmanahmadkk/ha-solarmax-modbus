@@ -78,6 +78,9 @@ async def entry(hass: HomeAssistant, sim: SimInverter, framer) -> AsyncGenerator
     config_entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
+    for _ in range(2):  # a brand-new counter publishes after 3 consistent polls
+        await config_entry.runtime_data.async_refresh()
+        await hass.async_block_till_done()
     yield config_entry
     if config_entry.state.recoverable:
         await hass.config_entries.async_unload(config_entry.entry_id)

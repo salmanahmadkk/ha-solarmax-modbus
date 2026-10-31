@@ -28,4 +28,12 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: Solarma
             for block, segments in coordinator.raw.items()
         },
         "segmented_blocks": sorted(coordinator.client._segmented),  # noqa: SLF001
+        "data_quality": {
+            "rejected_all_zero_blocks": coordinator.rejected_blocks,
+            "reads_with_impossible_values": coordinator.rejected_values,
+            "counters": {
+                key: {**guard.to_dict(), "pending": len(guard.pending), "last_event": guard.last_event}
+                for key, guard in coordinator.guards.items()
+            },
+        },
     }
