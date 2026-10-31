@@ -1,0 +1,43 @@
+name: Bug report
+description: Something is not working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead?
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Inverter model and firmware
+      description: Shown on the device page in Home Assistant.
+      placeholder: SM-ONYX-UL-10KW, master 010605
+    validations:
+      required: true
+  - type: dropdown
+    id: phases
+    attributes:
+      label: Phases
+      options: [Single-phase, Three-phase]
+    validations:
+      required: true
+  - type: input
+    id: gateway
+    attributes:
+      label: Modbus gateway and connection type
+      placeholder: Elfin EW11, Modbus TCP
+  - type: input
+    id: versions
+    attributes:
+      label: Home Assistant and integration version
+      placeholder: 2026.10.4 / v1.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and logs
+      description: Attach the diagnostics file (device page → ⋮ → Download diagnostics) and any relevant log lines.

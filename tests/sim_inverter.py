@@ -27,7 +27,7 @@ def _str(text: str, words: int) -> list[int]:
 
 
 def default_registers() -> dict[int, int]:
-    """Values modelled on the user's live inverter readings."""
+    """Realistic values from a single-phase 10 kW inverter with 3 MPPT inputs."""
     r: dict[int, int] = {}
 
     def put(addr, words):

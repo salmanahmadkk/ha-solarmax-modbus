@@ -33,7 +33,7 @@ async def _setup(hass, sim):
 
 async def test_repair_service_finds_and_fixes_spike(hass: HomeAssistant, sim: SimInverter) -> None:
     entry = await _setup(hass, sim)
-    statistic_id = "sensor.solarmax_total_import_fixed"
+    statistic_id = "sensor.house_grid_import_total"
     start = dt_util.utcnow().replace(minute=0, second=0, microsecond=0) - timedelta(hours=6)
     sums = [0, 1, 2, 12619, 12620, 12621]  # +12617 kWh spike in hour 3
     async_import_statistics(

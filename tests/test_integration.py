@@ -23,7 +23,7 @@ from custom_components.solarmax_modbus.diagnostics import async_get_config_entry
 from conftest import make_entry
 from sim_inverter import SimInverter, _s32
 
-# Every entity ID of the user's existing YAML Modbus setup.
+# Entity IDs a typical YAML modbus setup used (they must stay the same).
 LEGACY_IDS = [
     "load_voltage", "load_current", "load_power", "battery_daily_charge", "battery_total_charge",
     "battery_daily_discharge", "battery_total_discharge", "battery_soc", "battery_voltage",
