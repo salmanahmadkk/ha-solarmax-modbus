@@ -1,0 +1,525 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to your Solarmax inverter",
+        "description": "Enter the Modbus gateway (RS-485 to Wi-Fi/Ethernet converter) the inverter is connected to.",
+        "data": {
+          "name": "Name",
+          "host": "Host",
+          "port": "Port",
+          "device_address": "Modbus address",
+          "connection_type": "Connection type"
+        },
+        "data_description": {
+          "name": "Used as the device name and the start of every entity ID.",
+          "host": "IP address or host name of the gateway.",
+          "device_address": "The inverter's Modbus address (usually 1).",
+          "connection_type": "Modbus TCP if the gateway converts the protocol; RTU over TCP if it passes RS-485 data through unchanged."
+        }
+      },
+      "reconfigure": {
+        "title": "Change connection settings",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "device_address": "Modbus address",
+          "connection_type": "Connection type"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect, or the inverter did not answer. Check the host, port and connection type.",
+      "invalid_response": "The device answered but rejected the request. Check the Modbus address.",
+      "unknown": "Unexpected error, see the logs."
+    },
+    "abort": {
+      "already_configured": "This inverter is already set up.",
+      "reconfigure_successful": "Connection settings updated.",
+      "wrong_device": "That address belongs to a different inverter."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Polling and controls",
+        "data": {
+          "scan_interval": "Live data interval (seconds)",
+          "settings_interval": "Settings interval (seconds)",
+          "enable_controls": "Enable control entities"
+        },
+        "data_description": {
+          "enable_controls": "Off = read-only: no work mode, limits, schedule or on/off controls are created."
+        }
+      }
+    }
+  },
+  "selector": {
+    "connection_type": {
+      "options": {
+        "tcp": "Modbus TCP",
+        "rtuovertcp": "RTU over TCP (transparent gateway)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "phase_a_voltage": {
+        "name": "Phase A Voltage"
+      },
+      "phase_a_current": {
+        "name": "Phase A Current"
+      },
+      "phase_a_power": {
+        "name": "Phase A Power"
+      },
+      "phase_a_frequency": {
+        "name": "Phase A Frequency"
+      },
+      "phase_b_voltage": {
+        "name": "Phase B Voltage"
+      },
+      "phase_b_current": {
+        "name": "Phase B Current"
+      },
+      "phase_b_power": {
+        "name": "Phase B Power"
+      },
+      "phase_b_frequency": {
+        "name": "Phase B Frequency"
+      },
+      "phase_c_voltage": {
+        "name": "Phase C Voltage"
+      },
+      "phase_c_current": {
+        "name": "Phase C Current"
+      },
+      "phase_c_power": {
+        "name": "Phase C Power"
+      },
+      "phase_c_frequency": {
+        "name": "Phase C Frequency"
+      },
+      "active_power": {
+        "name": "Active Power"
+      },
+      "reactive_power": {
+        "name": "Reactive Power"
+      },
+      "power_factor": {
+        "name": "Power Factor"
+      },
+      "pv_daily_peak_power": {
+        "name": "PV Daily Peak Power"
+      },
+      "inner_temperature": {
+        "name": "Inner Temperature"
+      },
+      "pv1_voltage": {
+        "name": "PV1 Voltage"
+      },
+      "pv1_current": {
+        "name": "PV1 Current"
+      },
+      "pv1_power": {
+        "name": "PV1 Power"
+      },
+      "pv2_voltage": {
+        "name": "PV2 Voltage"
+      },
+      "pv2_current": {
+        "name": "PV2 Current"
+      },
+      "pv2_power": {
+        "name": "PV2 Power"
+      },
+      "pv3_voltage": {
+        "name": "PV3 Voltage"
+      },
+      "pv3_current": {
+        "name": "PV3 Current"
+      },
+      "pv3_power": {
+        "name": "PV3 Power"
+      },
+      "pv4_voltage": {
+        "name": "PV4 Voltage"
+      },
+      "pv4_current": {
+        "name": "PV4 Current"
+      },
+      "pv4_power": {
+        "name": "PV4 Power"
+      },
+      "pv_power": {
+        "name": "PV Power"
+      },
+      "pv_total_production": {
+        "name": "PV Total Production"
+      },
+      "pv_daily_production": {
+        "name": "PV Daily Production"
+      },
+      "total_generation_time": {
+        "name": "Total Generation Time"
+      },
+      "grid_frequency": {
+        "name": "Grid Frequency"
+      },
+      "total_import": {
+        "name": "Total Import"
+      },
+      "total_export": {
+        "name": "Total Export"
+      },
+      "daily_import": {
+        "name": "Daily Import"
+      },
+      "daily_export": {
+        "name": "Daily Export"
+      },
+      "daily_heavy_load_consumption": {
+        "name": "Daily Heavy Load Consumption"
+      },
+      "total_heavy_load_consumption": {
+        "name": "Total Heavy Load Consumption"
+      },
+      "load_frequency": {
+        "name": "Load Frequency"
+      },
+      "daily_load_consumption": {
+        "name": "Daily Load Consumption"
+      },
+      "total_load_consumption": {
+        "name": "Total Load Consumption"
+      },
+      "battery_soc": {
+        "name": "Battery SOC"
+      },
+      "battery_temperature": {
+        "name": "Battery Temperature"
+      },
+      "battery_voltage": {
+        "name": "Battery Voltage"
+      },
+      "battery_current": {
+        "name": "Battery Current"
+      },
+      "battery_power": {
+        "name": "Battery Power"
+      },
+      "battery_daily_charge": {
+        "name": "Battery Daily Charge"
+      },
+      "battery_total_charge": {
+        "name": "Battery Total Charge"
+      },
+      "battery_daily_discharge": {
+        "name": "Battery Daily Discharge"
+      },
+      "battery_total_discharge": {
+        "name": "Battery Total Discharge"
+      },
+      "faults": {
+        "name": "Faults"
+      },
+      "inverter_mode": {
+        "name": "Inverter Mode"
+      },
+      "error_code": {
+        "name": "Error Code"
+      },
+      "error_message_4": {
+        "name": "Error Message 4"
+      },
+      "inverter_clock": {
+        "name": "Inverter Clock"
+      },
+      "regulation_code": {
+        "name": "Grid Standard"
+      },
+      "meter_address": {
+        "name": "Meter Address"
+      },
+      "bms_address": {
+        "name": "BMS Address"
+      },
+      "lead_acid_capacity": {
+        "name": "Lead-Acid Capacity"
+      },
+      "lead_acid_stop_discharge_voltage": {
+        "name": "Lead-Acid Stop Discharge Voltage"
+      },
+      "lead_acid_stop_charge_voltage": {
+        "name": "Lead-Acid Stop Charge Voltage"
+      },
+      "off_grid_output_voltage": {
+        "name": "Off-Grid Output Voltage"
+      },
+      "off_grid_output_frequency": {
+        "name": "Off-Grid Output Frequency"
+      },
+      "rated_power": {
+        "name": "Rated Power"
+      },
+      "grid_voltage": {
+        "name": "Grid Voltage"
+      },
+      "grid_voltage_l2": {
+        "name": "Grid Voltage L2"
+      },
+      "grid_voltage_l3": {
+        "name": "Grid Voltage L3"
+      },
+      "grid_current": {
+        "name": "Grid Current"
+      },
+      "grid_current_l2": {
+        "name": "Grid Current L2"
+      },
+      "grid_current_l3": {
+        "name": "Grid Current L3"
+      },
+      "grid_power": {
+        "name": "Grid Power"
+      },
+      "grid_power_l2": {
+        "name": "Grid Power L2"
+      },
+      "grid_power_l3": {
+        "name": "Grid Power L3"
+      },
+      "heavy_load_voltage": {
+        "name": "Heavy Load Voltage"
+      },
+      "heavy_load_voltage_l2": {
+        "name": "Heavy Load Voltage L2"
+      },
+      "heavy_load_voltage_l3": {
+        "name": "Heavy Load Voltage L3"
+      },
+      "heavy_load_current": {
+        "name": "Heavy Load Current"
+      },
+      "heavy_load_current_l2": {
+        "name": "Heavy Load Current L2"
+      },
+      "heavy_load_current_l3": {
+        "name": "Heavy Load Current L3"
+      },
+      "heavy_load_power": {
+        "name": "Heavy Load Power"
+      },
+      "heavy_load_power_l2": {
+        "name": "Heavy Load Power L2"
+      },
+      "heavy_load_power_l3": {
+        "name": "Heavy Load Power L3"
+      },
+      "load_voltage": {
+        "name": "Load Voltage"
+      },
+      "load_voltage_l2": {
+        "name": "Load Voltage L2"
+      },
+      "load_voltage_l3": {
+        "name": "Load Voltage L3"
+      },
+      "load_current": {
+        "name": "Load Current"
+      },
+      "load_current_l2": {
+        "name": "Load Current L2"
+      },
+      "load_current_l3": {
+        "name": "Load Current L3"
+      },
+      "load_power": {
+        "name": "Load Power"
+      },
+      "load_power_l2": {
+        "name": "Load Power L2"
+      },
+      "load_power_l3": {
+        "name": "Load Power L3"
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "initial": "Initial",
+          "standby": "Standby",
+          "on_grid": "On-grid",
+          "off_grid": "Off-grid (backup)",
+          "fault": "Fault",
+          "shutdown": "Shutdown"
+        }
+      },
+      "battery_type": {
+        "name": "Battery Type",
+        "state": {
+          "unavailable": "None",
+          "lead_acid": "Lead-acid",
+          "pylon": "Pylontech lithium",
+          "dyness": "Dyness lithium",
+          "aobo": "Aobo lithium",
+          "uz": "UZ lithium",
+          "vestmoods": "VestMoods lithium",
+          "xinyi": "XinYi lithium"
+        }
+      },
+      "meter_type": {
+        "name": "Meter Type",
+        "state": {
+          "unknown": "Unknown",
+          "gavazzi_em340": "Gavazzi EM340",
+          "chint_dtsu666": "CHINT DTSU666",
+          "acrel_dtsf1352": "Acrel DTSF1352-C",
+          "lovato_dmg210": "Lovato DMG210",
+          "g2000": "G2000",
+          "gavazzi_et112": "Gavazzi ET112",
+          "ksem": "KSEM",
+          "chint_ddsu666": "CHINT DDSU666"
+        }
+      },
+      "meter_direction": {
+        "name": "Meter Direction",
+        "state": {
+          "positive": "Positive",
+          "negative": "Negative"
+        }
+      },
+      "power_limit_function": {
+        "name": "Export Limit Source",
+        "state": {
+          "disabled": "Disabled",
+          "external_device": "External device (G2000)",
+          "ct_sensor": "CT sensor",
+          "digital_meter": "Digital meter"
+        }
+      },
+      "ct_ratio": {
+        "name": "CT Ratio",
+        "state": {
+          "unknown": "Unknown",
+          "ratio_1000": "1000:1",
+          "ratio_2000": "2000:1",
+          "ratio_2500": "2500:1",
+          "ratio_3000": "3000:1",
+          "ratio_4000": "4000:1",
+          "ratio_5000": "5000:1",
+          "ratio_6000": "6000:1",
+          "ratio_10000": "10000:1"
+        }
+      },
+      "power_limit_mode": {
+        "name": "CT Position",
+        "state": {
+          "ct_on_grid": "On grid",
+          "ct_on_load": "On load"
+        }
+      },
+      "production_type": {
+        "name": "Production Type",
+        "state": {
+          "on_grid": "On-grid",
+          "ac_couple": "AC-coupled",
+          "hybrid": "Hybrid",
+          "hybrid_smart_load": "Hybrid with smart load",
+          "ac_couple_smart_load": "AC-coupled with smart load"
+        }
+      }
+    },
+    "binary_sensor": {
+      "fault": {
+        "name": "Fault"
+      },
+      "grid_available": {
+        "name": "Grid Available"
+      }
+    },
+    "number": {
+      "max_grid_charge_power": {
+        "name": "Max Grid Charge Power"
+      },
+      "grid_charge_end_soc": {
+        "name": "Grid Charge Stop SOC"
+      },
+      "max_charge_power": {
+        "name": "Max Charge Power"
+      },
+      "charge_end_soc": {
+        "name": "Charge Stop SOC"
+      },
+      "max_discharge_power": {
+        "name": "Max Discharge Power"
+      },
+      "discharge_end_soc": {
+        "name": "Discharge Cut-off SOC"
+      },
+      "off_grid_start_soc": {
+        "name": "Off-Grid Start SOC"
+      },
+      "max_charge_current": {
+        "name": "Max Charge Current"
+      },
+      "max_discharge_current": {
+        "name": "Max Discharge Current"
+      },
+      "export_limit": {
+        "name": "Export Limit"
+      },
+      "derating_percent": {
+        "name": "Output Derating"
+      }
+    },
+    "select": {
+      "work_mode": {
+        "name": "Work Mode",
+        "state": {
+          "self_use": "Self-use",
+          "feed_in_priority": "Feed-in priority",
+          "time_based": "Time-based control",
+          "backup": "Back-up",
+          "battery_discharge": "Battery discharge"
+        }
+      },
+      "schedule_repeat": {
+        "name": "Schedule Repeat",
+        "state": {
+          "once": "Once",
+          "every_day": "Every day"
+        }
+      }
+    },
+    "switch": {
+      "grid_charge": {
+        "name": "Grid Charging"
+      },
+      "off_grid_mode": {
+        "name": "Off-Grid Mode"
+      },
+      "inverter_power": {
+        "name": "Inverter Power"
+      }
+    },
+    "time": {
+      "charge_start": {
+        "name": "Charge Start Time"
+      },
+      "charge_end": {
+        "name": "Charge End Time"
+      },
+      "discharge_start": {
+        "name": "Discharge Start Time"
+      },
+      "discharge_end": {
+        "name": "Discharge End Time"
+      }
+    },
+    "button": {
+      "sync_clock": {
+        "name": "Sync Inverter Clock"
+      }
+    }
+  }
+}
