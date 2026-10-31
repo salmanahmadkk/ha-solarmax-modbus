@@ -1,6 +1,9 @@
 {
   "domain": "solarmax_modbus",
   "name": "Solarmax Hybrid Inverter (Modbus)",
+  "categories": [
+    "energy.solar_batteries"
+  ],
   "codeowners": [
     "@salmanahmadkk"
   ],
