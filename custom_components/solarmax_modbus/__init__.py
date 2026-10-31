@@ -5,13 +5,23 @@ from __future__ import annotations
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_CONNECTION_TYPE, CONF_DEVICE_ADDRESS, CONF_ENABLE_CONTROLS, DEFAULT_ENABLE_CONTROLS
+from .const import CONF_CONNECTION_TYPE, CONF_DEVICE_ADDRESS, CONF_ENABLE_CONTROLS, DEFAULT_ENABLE_CONTROLS, DOMAIN
 from .coordinator import SolarmaxConfigEntry, SolarmaxCoordinator
 from .modbus import CONNECTION_TCP, SolarmaxError, SolarmaxModbusClient
+from .services import async_setup_services
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 READ_PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 CONTROL_PLATFORMS = [Platform.NUMBER, Platform.SELECT, Platform.SWITCH, Platform.TIME, Platform.BUTTON]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    async_setup_services(hass)
+    return True
 
 
 def _platforms(entry: SolarmaxConfigEntry) -> list[Platform]:

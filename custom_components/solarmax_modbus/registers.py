@@ -289,6 +289,36 @@ ALL_BLOCKS = FAST_BLOCKS + SLOW_BLOCKS + (INFO_BLOCK,)
 FIELDS: dict[str, Field] = {f.key: f for b in ALL_BLOCKS for f in b.fields}
 BLOCK_OF: dict[str, Block] = {f.key: b for b in ALL_BLOCKS for f in b.fields}
 
+# Values outside these ranges are physically impossible and come from a
+# corrupted read; they are shown as unavailable instead of being published.
+_AC_V = (0, 500)
+_HZ = (0, 70)
+SANE_RANGES: dict[str, tuple[float, float]] = {
+    "battery_soc": (0, 100),
+    "inner_temperature": (-40, 150),
+    "battery_temperature": (-40, 150),
+    "battery_voltage": (0, 1000),
+    "power_factor": (-1, 1),
+    **{f"pv{i}_voltage": (0, 1500) for i in range(1, 5)},
+    **{k: _AC_V for k in ("phase_a_voltage", "phase_b_voltage", "phase_c_voltage", "grid_voltage",
+                          "grid_voltage_l2", "grid_voltage_l3", "load_voltage", "load_voltage_l2",
+                          "load_voltage_l3", "heavy_load_voltage", "heavy_load_voltage_l2", "heavy_load_voltage_l3")},
+    **{k: _HZ for k in ("phase_a_frequency", "phase_b_frequency", "phase_c_frequency", "grid_frequency",
+                        "load_frequency")},
+}
+
+
+def sanitize(values: dict) -> int:
+    """Blank out impossible values in place. Returns how many were removed."""
+    removed = 0
+    for key, (low, high) in SANE_RANGES.items():
+        value = values.get(key)
+        if value is not None and not low <= value <= high:
+            values[key] = None
+            removed += 1
+    return removed
+
+
 # ------------------------------------------------------------------ enums
 INVERTER_MODES = {0: "initial", 1: "standby", 3: "on_grid", 4: "off_grid", 5: "fault", 9: "shutdown"}
 FAULT_MODE = 5

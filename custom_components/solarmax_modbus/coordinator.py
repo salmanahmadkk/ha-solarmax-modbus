@@ -59,6 +59,9 @@ class SolarmaxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_write: dict[int, float] = {}
         self._write_lock = asyncio.Lock()
         self.platforms: list = []
+        self.guards: dict[str, Any] = {}  # counter guards, registered by the sensors
+        self.rejected_blocks = 0
+        self.rejected_values = 0
 
     # ----------------------------------------------------------- device info
     async def async_load_info(self) -> None:
@@ -92,6 +95,11 @@ class SolarmaxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return power if isinstance(power, int) and power > 0 else None
 
     @property
+    def max_energy_rate(self) -> float:
+        """Most kWh any counter can plausibly add per hour (grid can exceed the inverter)."""
+        return max(30.0, 3 * (self.rated_power or 10000) / 1000)
+
+    @property
     def device_info(self) -> DeviceInfo:
         info = self.info
         versions = [v for v in (info.get("master_version"),) if v]
@@ -118,6 +126,14 @@ class SolarmaxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except SolarmaxModbusError as err:
                 _LOGGER.warning("Block %s could not be read: %s", block.name, err)
                 values, raw = {}, {}
+            if raw and all(word == 0 for regs in raw.values() for word in regs):
+                # Every live block holds lifetime counters, so all zeros is
+                # always a corrupted answer (seen after Wi-Fi reconnects).
+                _LOGGER.warning("Block %s came back as all zeros; ignoring this read", block.name)
+                self.rejected_blocks += 1
+                values = {}
+            if R.sanitize(values):
+                self.rejected_values += 1
             for fld in block.fields:  # unread fields become unavailable, not stale
                 data[fld.key] = values.get(fld.key)
             self.raw[block.name] = raw

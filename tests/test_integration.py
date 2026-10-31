@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 
 import pytest
 
@@ -80,9 +82,9 @@ async def test_legacy_entity_ids_and_values(hass: HomeAssistant, entry, sim: Sim
     assert ent.unique_id == "SM2309123456_total_import"
     # 3 fast blocks + 5 slow + info = 9 reads for setup, then 3 per poll
     reads = [r for r in sim.requests if r[0] == 3]
-    assert len(reads) == 9
+    assert len(reads) == 9 + 2 * 3
     await refresh(hass, entry)
-    assert len([r for r in sim.requests if r[0] == 3]) == 12
+    assert len([r for r in sim.requests if r[0] == 3]) == 18
 
 
 async def test_controls_write_the_right_registers(hass: HomeAssistant, entry, sim: SimInverter) -> None:
@@ -167,19 +169,60 @@ async def test_faults_and_events(hass: HomeAssistant, entry, sim: SimInverter) -
 
 
 async def test_lifetime_counters_never_drop(hass: HomeAssistant, entry, sim: SimInverter) -> None:
-    sim.regs.update(dict(zip((0x1306, 0x1307), _s32(0))))  # glitch: total import reads 0
+    sim.regs.update(dict(zip((0x1306, 0x1307), _s32(0), strict=True)))  # glitch: total import reads 0
     await refresh(hass, entry)
     assert st(hass, "sensor.solarmax_total_import").state == "12630.47"
-    sim.regs.update(dict(zip((0x1306, 0x1307), _s32(1263000))))  # lower than before
+    sim.regs.update(dict(zip((0x1306, 0x1307), _s32(1263000), strict=True)))  # lower than before
     await refresh(hass, entry)
     assert st(hass, "sensor.solarmax_total_import").state == "12630.47"
-    sim.regs.update(dict(zip((0x1306, 0x1307), _s32(1263100))))  # real increase
+    sim.regs.update(dict(zip((0x1306, 0x1307), _s32(1263100), strict=True)))  # real increase
     await refresh(hass, entry)
     assert st(hass, "sensor.solarmax_total_import").state == "12631.0"
-    # daily counters may reset at midnight
-    sim.regs.update(dict(zip((0x1332, 0x1333), _s32(0))))
+    # a daily counter dropping to 0 in the middle of the day is a glitch ...
+    sim.regs.update(dict(zip((0x1332, 0x1333), _s32(0), strict=True)))
     await refresh(hass, entry)
-    assert st(hass, "sensor.solarmax_daily_import").state == "0.0"
+    assert st(hass, "sensor.solarmax_daily_import").state == "7.27"
+
+
+async def test_daily_counter_resets_at_midnight(hass: HomeAssistant, sim: SimInverter) -> None:
+    from unittest.mock import patch
+
+    base = dt_util.now().replace(hour=23, minute=40, second=0, microsecond=0)
+    clock = {"t": base}
+    with patch(
+        "custom_components.solarmax_modbus.sensor._clock",
+        side_effect=lambda: (clock["t"].timestamp(), clock["t"]),
+    ):
+        entry = make_entry(sim)
+        entry.add_to_hass(hass)
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+        assert st(hass, "sensor.solarmax_daily_import").state == "7.27"
+        clock["t"] = base + timedelta(minutes=25)  # 00:05 next day
+        sim.regs.update(dict(zip((0x1332, 0x1333), _s32(3), strict=True)))
+        await refresh(hass, entry)
+        assert st(hass, "sensor.solarmax_daily_import").state == "0.03"
+        await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+
+
+async def test_all_zero_block_is_ignored(hass: HomeAssistant, entry, sim: SimInverter) -> None:
+    for addr in range(0x1300, 0x1364):
+        sim.regs[addr] = 0
+    await refresh(hass, entry)
+    # grid block values become unavailable instead of 0 ...
+    assert st(hass, "sensor.solarmax_grid_power").state == STATE_UNAVAILABLE
+    assert st(hass, "sensor.solarmax_total_import").state == STATE_UNAVAILABLE
+    # ... other blocks keep working
+    assert st(hass, "sensor.solarmax_battery_soc").state == "99"
+    assert entry.runtime_data.rejected_blocks == 1
+
+
+async def test_impossible_values_are_blanked(hass: HomeAssistant, entry, sim: SimInverter) -> None:
+    sim.regs[0x2000] = 250  # SOC 250 %
+    await refresh(hass, entry)
+    assert st(hass, "sensor.solarmax_battery_soc").state == STATE_UNAVAILABLE
+    assert st(hass, "sensor.solarmax_battery_voltage").state == "55.0"
 
 
 async def test_offline_inverter_goes_unavailable_and_recovers(hass: HomeAssistant, entry, sim: SimInverter) -> None:
